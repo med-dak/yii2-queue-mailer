@@ -1,56 +1,36 @@
 <?php
-/**
- * @author Alexey Samoylov <alexey.samoylov@gmail.com>
- */
-class MailerTest extends \PHPUnit\Framework\TestCase
+
+namespace Jbboisseau\Yii2\QueueMailer\Tests;
+
+use Jbboisseau\Yii2\QueueMailer\Tests\Support\QueueMailerTestCase;
+use yii\mail\MailerInterface;
+
+class MailerTest extends QueueMailerTestCase
 {
-    /** @var \YarCode\Yii2\QueueMailer\Mailer */
-    public $mailer;
-    /** @var \yii\mail\MessageInterface */
-    public $message;
-    /**
-     * @throws \yii\base\InvalidConfigException
-     */
-    public function setUp()
+    public function testInterface(): void
     {
-        parent::setUp();
-
-        $this->mailer = \Yii::createObject([
-            'class' => \YarCode\Yii2\QueueMailer\Mailer::class,
-            'queue' => [
-                'class' => \yii\queue\sync\Queue::class,
-                'handle' => false, // whether tasks should be executed immediately
-            ],
-            'syncMailer' => [
-                'class' => \yii\swiftmailer\Mailer::class,
-                'useFileTransport' => true,
-            ],
-        ]);
-
-        $this->message = $this->mailer->compose();
-        $this->message->setTo('test@example.org');
-        $this->message->setFrom('no-reply@example.org');
-        $this->message->setHtmlBody('test message');
+        self::assertInstanceOf(MailerInterface::class, $this->mailer);
     }
 
-    public function testInterface()
+    public function testSend(): void
     {
-        $this->assertInstanceOf(\yii\mail\MailerInterface::class, $this->mailer);
+        self::assertTrue($this->mailer->send($this->createMessage()));
+        self::assertCount(1, $this->queue->jobs);
     }
 
-    public function testSend()
+    public function testSendMultiple(): void
     {
-        $this->assertTrue($this->mailer->send($this->message));
+        self::assertSame(2, $this->mailer->sendMultiple([
+            $this->createMessage('one'),
+            $this->createMessage('two'),
+        ]));
+        self::assertCount(1, $this->queue->jobs);
     }
 
-    public function testSendMultiple()
+    public function testGetLastJobId(): void
     {
-        $this->assertEquals(2, $this->mailer->send([$this->message, $this->message]));
-    }
+        $this->mailer->send($this->createMessage());
 
-    public function testGetLastJobId()
-    {
-        $this->mailer->send($this->message);
-        $this->assertEquals(1, $this->mailer->getLastJobId());
+        self::assertSame(1, $this->mailer->getLastJobId());
     }
 }

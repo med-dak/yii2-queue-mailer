@@ -6,34 +6,37 @@ namespace Jbboisseau\Yii2\QueueMailer;
 
 use Jbboisseau\Yii2\QueueMailer\Jobs\SendMultipleMessagesJob;
 use Jbboisseau\Yii2\QueueMailer\Jobs\SendMessageJob;
-use yii\base\Component;
 use yii\base\InvalidConfigException;
 use yii\di\Instance;
 use yii\mail\MailerInterface;
 use yii\mail\BaseMailer;
-use yii\queue\Queue;
 
 class Mailer extends BaseMailer implements MailerInterface
 {
     /** @var string */
     public $id = 'mailer';
-    /** @var Queue */
+    /** @var object|string|callable Queue implementation exposing a push() method */
     protected $queue = 'queue';
-    /** @var MailerInterface */
+    /** @var MailerInterface|string|callable */
     protected $syncMailer;
-    /** @var int|null */
+    /** @var int|string|null */
     protected $lastJobId;
 
     /**
-     * @return object|Queue
+     * @return object
      * @throws InvalidConfigException
      */
     public function getQueue()
     {
-        if (is_callable($this->queue)) {
+        if (is_string($this->queue)) {
+            $this->queue = \Yii::$app->get($this->queue);
+        } elseif (is_callable($this->queue)) {
             $this->queue = call_user_func($this->queue);
         }
-        return $this->queue = Instance::ensure($this->queue, Queue::class);
+        if (!is_object($this->queue) || !method_exists($this->queue, 'push')) {
+            throw new InvalidConfigException('Queue must be an object exposing a push() method.');
+        }
+        return $this->queue;
     }
 
     /**
@@ -45,7 +48,7 @@ class Mailer extends BaseMailer implements MailerInterface
     }
 
     /**
-     * @return object|MailerInterface
+     * @return MailerInterface
      * @throws InvalidConfigException
      */
     public function getSyncMailer()
@@ -72,11 +75,12 @@ class Mailer extends BaseMailer implements MailerInterface
     {
         return $this->getSyncMailer()->compose($view, $params);
     }
-    
+
     /**
-     * dummy function for BaseMailer inheritance
+     * Dummy implementation required by BaseMailer.
+     * Messages are actually sent by SendMessageJob / SendMultipleMessagesJob.
      */
-    public function sendMessage($view = null, array $params = [])
+    protected function sendMessage($message)
     {
         return true;
     }
@@ -108,15 +112,11 @@ class Mailer extends BaseMailer implements MailerInterface
         $job->mailer = $this->id;
         $job->messages = $messages;
         $this->lastJobId = $this->getQueue()->push($job);
-        if ($this->lastJobId !== null) {
-            return count($messages);
-        } else {
-            return 0;
-        }
+        return $this->lastJobId !== null ? count($messages) : 0;
     }
 
     /**
-     * @return int|null
+     * @return int|string|null
      */
     public function getLastJobId()
     {

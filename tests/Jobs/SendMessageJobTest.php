@@ -1,54 +1,20 @@
 <?php
-/**
- * @author Alexey Samoylov <alexey.samoylov@gmail.com>
- */
-class SendMessageJobTest extends \PHPUnit\Framework\TestCase
+
+namespace Jbboisseau\Yii2\QueueMailer\Tests\Jobs;
+
+use Jbboisseau\Yii2\QueueMailer\Jobs\SendMessageJob;
+use Jbboisseau\Yii2\QueueMailer\Tests\Support\QueueMailerTestCase;
+
+class SendMessageJobTest extends QueueMailerTestCase
 {
-    /** @var \YarCode\Yii2\QueueMailer\Mailer */
-    public $mailer;
-    /** @var \yii\mail\MessageInterface */
-    public $message;
-    /** @var \YarCode\Yii2\QueueMailer\Jobs\SendMessageJob */
-    public $a;
-
-    /**
-     * @throws \yii\base\InvalidConfigException
-     */
-    public function setUp()
+    public function testExecute(): void
     {
-        parent::setUp();
-
-        $this->mailer = \Yii::createObject([
-            'class' => \YarCode\Yii2\QueueMailer\Mailer::class,
-            'queue' => [
-                'class' => \yii\queue\sync\Queue::class,
-                'handle' => false, // whether tasks should be executed immediately
-            ],
-            'syncMailer' => [
-                'class' => \yii\swiftmailer\Mailer::class,
-                'useFileTransport' => true,
-            ],
-        ]);
-
-        $this->message = $this->mailer->compose();
-        $this->message->setTo('test@example.org');
-        $this->message->setFrom('no-reply@example.org');
-        $this->message->setHtmlBody('test message');
-
-        $this->a = \Yii::createObject([
-            'class' => \YarCode\Yii2\QueueMailer\Jobs\SendMessageJob::class,
+        $job = \Yii::createObject([
+            'class' => SendMessageJob::class,
             'mailer' => $this->mailer,
-            'message' => $this->message,
+            'message' => $this->createMessage(),
         ]);
-    }
 
-    protected function tearDown()/* The :void return type declaration that should be here would cause a BC issue */
-    {
-        \yii\helpers\FileHelper::removeDirectory(Yii::getAlias('@runtime/mail'));
-    }
-
-    public function testExecute()
-    {
-        $this->assertTrue($this->a->execute($this->mailer->queue));
+        self::assertTrue($job->execute($this->queue));
     }
 }

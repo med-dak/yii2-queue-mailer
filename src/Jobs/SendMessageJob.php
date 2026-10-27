@@ -5,23 +5,23 @@
 
 namespace Jbboisseau\Yii2\QueueMailer\Jobs;
 
+use Jbboisseau\Yii2\QueueMailer\JobInterface;
 use Jbboisseau\Yii2\QueueMailer\Mailer;
 use yii\base\BaseObject;
 use yii\base\InvalidConfigException;
 use yii\di\Instance;
 use yii\mail\MessageInterface;
-use yii\queue\JobInterface;
 
 class SendMessageJob extends BaseObject implements JobInterface
 {
     /** @var MessageInterface */
     public $message;
-    /** @var string */
+    /** @var string|Mailer */
     public $mailer;
 
     /**
      * @inheritdoc
-     * @see JobInterface::execute(
+     * @see JobInterface::execute()
      *
      * @throws InvalidConfigException
      * @throws \InvalidArgumentException
