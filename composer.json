@@ -1,5 +1,5 @@
 {
-  "name": "jbboisseau/yii2-queue-mailer",
+  "name": "med-dak/yii2-queue-mailer",
   "description": "Queue mailer decorator for Yii2 framework",
   "type": "yii2-extension",
   "keywords": [
